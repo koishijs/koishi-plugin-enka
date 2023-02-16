@@ -1,0 +1,7 @@
+extends:
+- '@hydrooj/eslint-config/base.yaml'
+rules:
+- '@typescript-eslint/indent': [warn, 4]
+ignorePatterns:
+- node_modules
+- dist
