@@ -1,0 +1,10 @@
+{
+    "name": "koishi-plugin-enka",
+    "version": "0.0.1",
+    "dependencies": {
+        "sharp": "^0.27.2"
+    },
+    "peerDependencies": {
+        "koishi-core": "*"
+    }
+}
