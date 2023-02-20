@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-enka",
   "description": "Enka.Network for koishi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "src/index.ts",
   "author": "undefined <i@undefined.moe>",
   "contributors": [
@@ -18,7 +18,8 @@
     },
     "service": {
       "required": [
-        "puppeteer"
+        "puppeteer",
+        "cache"
       ]
     }
   },
@@ -40,6 +41,7 @@
   },
   "peerDependencies": {
     "koishi": "^4.11.0",
-    "koishi-plugin-puppeteer": "^3.4.1"
+    "koishi-plugin-puppeteer": "^3.4.1",
+    "@koishijs/cache": "^0.1.3"
   }
 }
