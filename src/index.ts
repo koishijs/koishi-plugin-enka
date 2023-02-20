@@ -1,5 +1,6 @@
-import { Context, Schema, h } from 'koishi';
+import { Argv, Context, Schema, h } from 'koishi';
 import { } from 'koishi-plugin-puppeteer';
+import { } from '@koishijs/cache';
 import type { HTTPResponse, Page } from 'puppeteer-core';
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -8,29 +9,57 @@ declare module 'koishi' {
     interface User {
         genshin_uid: string
     }
+    namespace Argv {
+        interface Domain {
+            UID: string
+        }
+    }
+}
+
+declare module '@koishijs/cache' {
+    interface Tables {
+        enka: string
+    }
 }
 
 export const name = 'enka'
 
-export const using = ['puppeteer']
+export const using = ['puppeteer', 'cache']
 
-export interface Config { 
-    cacheTime: number
+export const usage = `
+## 插件说明
+
+推荐（默认）设置缓存时间为角色展柜的刷新时间： 5 分钟。
+
+> \`最大缓存时间\` 最小值为 6000(1m): enka.network 限制了查询时间为 1 分钟。
+`
+
+export interface Config {
+    maxAge: number
     reverseProxy: string
 }
 
 export const Config: Schema<Config> = Schema.object({
-    cacheTime: Schema.number().min(0).max(300000).step(1).description('图片缓存最大时间（毫秒）'),
+    maxAge: Schema.number().min(60000).max(9000000).default(300000).step(1).description('图片缓存最大时间（毫秒）'),
     reverseProxy: Schema.string().role('link').description('加速代理地址（不是梯子）')
 })
 
-export function apply(ctx: Context) {
+Argv.createDomain('UID', source => {
+    if (/^[1256789][0-9]{3,9}$/gm.test(source))
+        return source
+    else
+        throw new Error(`"${source}"不是一个正确的uid`)
+})
+
+export function apply(ctx: Context, config: Config) {
     let page: Page;
     let lock: Promise<void>;
 
     ctx.model.extend('user', {
         genshin_uid: 'string(20)'
     })
+
+    const cache = ctx.cache('enka')
 
     ctx.command('enka <search:string>')
         .alias('原')
@@ -42,9 +71,12 @@ export function apply(ctx: Context) {
             if (lock) await lock;
             let resolve: () => void;
             lock = new Promise((r) => { resolve = r; });
-            ctx.setTimeout(() => {
-                session.send('坐和放宽，在加载了！')
-            }, 6000)
+            const cacheKey = `enka_u${session.user.genshin_uid}_${search}`
+            const cacheValue = await cache.get(cacheKey)
+            //cache
+            if (cacheValue) {
+                return h.image(Buffer.from(cacheValue, 'base64').buffer, 'image/png')
+            }
             try {
                 await page.goto(`https://enka.network/u/${session.user.genshin_uid}/`, {
                     waitUntil: 'networkidle0',
@@ -80,6 +112,7 @@ export function apply(ctx: Context) {
                     };
                     page.on('response', cb);
                 });
+                await cache.set(cacheKey, buf.toString('base64'), config.maxAge)
                 return h.image(buf, 'image/png')
             } catch (error) {
                 console.error(error);
@@ -87,5 +120,11 @@ export function apply(ctx: Context) {
             } finally {
                 resolve();
             }
+        })
+        .subcommand('.uid <uid:UID>')
+        .userFields(['genshin_uid'])
+        .action(async ({ session }, uid) => {
+            session.user.genshin_uid = uid
+            session.send(`已保存你的 uid(${uid})`)
         })
 }
