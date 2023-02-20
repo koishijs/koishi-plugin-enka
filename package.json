@@ -1,6 +1,7 @@
 {
   "name": "koishi-plugin-enka",
-  "version": "0.0.1",
+  "description": "Enka.Network for koishi",
+  "version": "0.1.0",
   "main": "src/index.ts",
   "author": "undefined <i@undefined.moe>",
   "contributors": [
@@ -10,12 +11,35 @@
   "scripts": {
     "lint": "eslint src --ext ts"
   },
+  "koishi": {
+    "description": {
+      "zh": "🐬 查查你的原神练度",
+      "en": "🐬 Show your genshin character showcase in koishi bot"
+    },
+    "service": {
+      "required": [
+        "puppeteer"
+      ]
+    }
+  },
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin",
+    "genshin",
+    "yunzai",
+    "enka",
+    "原神",
+    "练度"
+  ],
   "devDependencies": {
     "@hydrooj/eslint-config": "^1.0.0",
     "eslint": "^8.34.0",
-    "koishi": "^4.11.7"
+    "koishi": "^4.11.7",
+    "koishi-plugin-puppeteer": "3.4.4"
   },
   "peerDependencies": {
-    "koishi": "^4.11.0"
+    "koishi": "^4.11.0",
+    "koishi-plugin-puppeteer": "^3.4.1"
   }
 }

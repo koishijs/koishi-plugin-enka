@@ -1,12 +1,36 @@
-import { Context, segment } from 'koishi-core';
+import { Context, Schema, h } from 'koishi';
+import { } from 'koishi-plugin-puppeteer';
 import type { HTTPResponse, Page } from 'puppeteer-core';
-import sharp from 'sharp';
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+declare module 'koishi' {
+    interface User {
+        genshin_uid: string
+    }
+}
+
+export const name = 'enka'
+
+export const using = ['puppeteer']
+
+export interface Config { 
+    cacheTime: number
+    reverseProxy: string
+}
+
+export const Config: Schema<Config> = Schema.object({
+    cacheTime: Schema.number().min(0).max(300000).step(1).description('图片缓存最大时间（毫秒）'),
+    reverseProxy: Schema.string().role('link').description('加速代理地址（不是梯子）')
+})
 
 export function apply(ctx: Context) {
     let page: Page;
     let lock: Promise<void>;
+
+    ctx.model.extend('user', {
+        genshin_uid: 'string(20)'
+    })
 
     ctx.command('enka <search:string>')
         .alias('原')
@@ -18,19 +42,22 @@ export function apply(ctx: Context) {
             if (lock) await lock;
             let resolve: () => void;
             lock = new Promise((r) => { resolve = r; });
+            ctx.setTimeout(() => {
+                session.send('坐和放宽，在加载了！')
+            }, 6000)
             try {
                 await page.goto(`https://enka.network/u/${session.user.genshin_uid}/`, {
                     waitUntil: 'networkidle0',
-                    timeout: 60000,
+                    timeout: 120000,
                 });
                 const { left, top } = await page.evaluate(async (search) => {
-                    Array.from(document.querySelectorAll('.UI.SelectorElement')).find(i => i.innerHTML.trim() === '简体中文').click();
-                    Array.from(document.querySelectorAll('.Dropdown-list')).map(i => i.style.display = 'none');
+                    Array.from((document.querySelectorAll('.UI.SelectorElement')) as NodeListOf<HTMLElement>).find(i => i.innerHTML.trim() === '简体中文').click();
+                    Array.from((document.querySelectorAll('.Dropdown-list')) as NodeListOf<HTMLElement>).map(i => i.style.display = 'none');
                     const tabs = Array.from(document.getElementsByTagName('figure'));
                     const select = tabs.find(i => i.style.backgroundImage?.toLowerCase().includes(search));
                     if (!select) return { left: 0, top: 0 };
                     const rect = select.parentElement.getBoundingClientRect();
-                    Array.from(document.querySelectorAll('.Checkbox.Control.sm:not(.checked)')).map(i => i.click());
+                    Array.from((document.querySelectorAll('.Checkbox.Control.sm:not(.checked)')) as NodeListOf<HTMLElement>).map(i => i.click());
                     return { left: rect.left, top: rect.top };
                 }, search.toLowerCase());
                 if (!left) return '没有在玩家的角色展柜中找到该角色。';
@@ -40,7 +67,7 @@ export function apply(ctx: Context) {
                     page.evaluate(() => {
                         const input = document.querySelector('[placeholder="自定义文本"]') as HTMLInputElement
                             || document.querySelector('[placeholder="Custom text"]') as HTMLInputElement;
-                        input.value = 'HydroBot & Enka Network';
+                        input.value = 'Koishi & Enka Network';
                         input.dispatchEvent(new Event('input'));
                     }),
                 ]);
@@ -53,8 +80,7 @@ export function apply(ctx: Context) {
                     };
                     page.on('response', cb);
                 });
-                const img = await sharp(buf).jpeg().toBuffer();
-                return segment.image(`base64://${img.toString('base64')}`);
+                return h.image(buf, 'image/png')
             } catch (error) {
                 console.error(error);
                 return '无法查看。'
