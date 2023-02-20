@@ -1,20 +1,21 @@
 {
-    "name": "koishi-plugin-enka",
-    "version": "0.0.1",
-    "main": "src/index.ts",
-    "author": "undefined <i@undefined.moe>",
-    "license": "AGPL-3.0-or-later",
-    "scripts": {
-        "lint": "eslint src --ext ts"
-    },
-    "dependencies": {
-        "sharp": "^0.27.2"
-    },
-    "devDependencies": {
-        "@hydrooj/eslint-config": "^1.0.0",
-        "eslint": "^8.34.0"
-    },
-    "peerDependencies": {
-        "koishi-core": "*"
-    }
+  "name": "koishi-plugin-enka",
+  "version": "0.0.1",
+  "main": "src/index.ts",
+  "author": "undefined <i@undefined.moe>",
+  "contributors": [
+    "Lonay <i@lonay.me>"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@hydrooj/eslint-config": "^1.0.0",
+    "eslint": "^8.34.0",
+    "koishi": "^4.11.7"
+  },
+  "peerDependencies": {
+    "koishi": "^4.11.0"
+  }
 }
