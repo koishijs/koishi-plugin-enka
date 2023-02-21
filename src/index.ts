@@ -55,25 +55,35 @@ Argv.createDomain('UID', source => {
 export function apply(ctx: Context, config: Config) {
     let page: Page;
     let lock: Promise<void>;
+    let mapIndex: Record<string, string> = {};
 
     ctx.model.extend('user', {
         genshin_uid: 'string(20)'
     })
 
-    const cache = ctx.cache('enka')
+    const cache = ctx.cache('enka');
 
     ctx.command('enka <search:string>')
         .alias('原')
         .userFields(['genshin_uid'])
         .action(async ({ session }, search) => {
-            // TODO convert character name
+            //indexing
+            if (Object.keys(mapIndex).length <= 0) {
+                for (let key in map) {
+                    const character = map[key];
+                    character['nikename'].forEach(name => {
+                        mapIndex[name] = key;
+                    });
+                }
+            }
             if (!session.user.genshin_uid) return '请先使用 enka.uid [uid] 绑定账号。';
-
-            await session.send('别急，准备开查了！')
-            const cacheKey = `enka_u${session.user.genshin_uid}_${search}`
-            const cacheValue = await cache.get(cacheKey)
+            if (!mapIndex[search]) return '不存在该角色！';
+            search = mapIndex[search]
+            await session.send('别急，准备开查了！');
+            const cacheKey = `enka_u${session.user.genshin_uid}_${search}`;
+            const cacheValue = await cache.get(cacheKey);
             //cache
-            if (cacheValue) return h.image(Buffer.from(cacheValue, 'base64').buffer, 'image/png')
+            if (cacheValue) return h.image(Buffer.from(cacheValue, 'base64').buffer, 'image/png');
             //
             if (!page) page = await ctx.puppeteer.page();
             if (lock) await lock;
@@ -84,11 +94,6 @@ export function apply(ctx: Context, config: Config) {
                     waitUntil: 'networkidle0',
                     timeout: 60000,
                 });
-
-                ctx.setTimeout(()=>{
-                    session.send('坐和放宽，网有点慢！')
-                }, 60000)
-
                 const { left, top } = await page.evaluate(async (search) => {
                     Array.from((document.querySelectorAll('.UI.SelectorElement')) as NodeListOf<HTMLElement>).find(i => i.innerHTML.trim() === '简体中文').click();
                     Array.from((document.querySelectorAll('.Dropdown-list')) as NodeListOf<HTMLElement>).map(i => i.style.display = 'none');
