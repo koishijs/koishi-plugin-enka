@@ -1,8 +1,9 @@
 {
   "name": "koishi-plugin-enka",
   "description": "Enka.Network for koishi",
-  "version": "0.1.1",
-  "main": "src/index.ts",
+  "version": "0.1.2",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "author": "undefined <i@undefined.moe>",
   "contributors": [
     "Lonay <i@lonay.me>"
