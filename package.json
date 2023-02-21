@@ -1,7 +1,8 @@
 {
   "name": "koishi-plugin-enka",
   "description": "Enka.Network for koishi",
-  "version": "0.1.3",
+  "version": "0.1.4",
+  "homepage": "https://github.com/koishijs/koishi-plugin-enka",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "author": "undefined <i@undefined.moe>",
