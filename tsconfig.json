@@ -10,11 +10,13 @@
       "skipLibCheck": true,
       "esModuleInterop": true,
       "moduleResolution": "node",
+      "resolveJsonModule": true,
       "jsx": "react-jsx",
       "jsxImportSource": "@satorijs/element",
     },
     "include": [
       "src",
+      "src/map.json"
     ],
   }
   

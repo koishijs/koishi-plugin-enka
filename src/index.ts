@@ -2,6 +2,7 @@ import { Argv, Context, Schema, h } from 'koishi';
 import { } from 'koishi-plugin-puppeteer';
 import { } from '@koishijs/cache';
 import type { HTTPResponse, Page } from 'puppeteer-core';
+import map from './map.json'
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -66,22 +67,28 @@ export function apply(ctx: Context, config: Config) {
         .userFields(['genshin_uid'])
         .action(async ({ session }, search) => {
             // TODO convert character name
-            if (!session.user.genshin_uid) return '请先使用 genshin [uid] 绑定账号。';
+            if (!session.user.genshin_uid) return '请先使用 enka.uid [uid] 绑定账号。';
+
+            await session.send('别急，准备开查了！')
+            const cacheKey = `enka_u${session.user.genshin_uid}_${search}`
+            const cacheValue = await cache.get(cacheKey)
+            //cache
+            if (cacheValue) return h.image(Buffer.from(cacheValue, 'base64').buffer, 'image/png')
+            //
             if (!page) page = await ctx.puppeteer.page();
             if (lock) await lock;
             let resolve: () => void;
             lock = new Promise((r) => { resolve = r; });
-            const cacheKey = `enka_u${session.user.genshin_uid}_${search}`
-            const cacheValue = await cache.get(cacheKey)
-            //cache
-            if (cacheValue) {
-                return h.image(Buffer.from(cacheValue, 'base64').buffer, 'image/png')
-            }
             try {
-                await page.goto(`https://enka.network/u/${session.user.genshin_uid}/`, {
+                await page.goto(`${config.reverseProxy || 'https://enka.network'}/u/${session.user.genshin_uid}/`, {
                     waitUntil: 'networkidle0',
-                    timeout: 120000,
+                    timeout: 60000,
                 });
+
+                ctx.setTimeout(()=>{
+                    session.send('坐和放宽，网有点慢！')
+                }, 60000)
+
                 const { left, top } = await page.evaluate(async (search) => {
                     Array.from((document.querySelectorAll('.UI.SelectorElement')) as NodeListOf<HTMLElement>).find(i => i.innerHTML.trim() === '简体中文').click();
                     Array.from((document.querySelectorAll('.Dropdown-list')) as NodeListOf<HTMLElement>).map(i => i.style.display = 'none');
