@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-enka",
   "description": "Enka.Network for koishi",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "homepage": "https://github.com/koishijs/koishi-plugin-enka",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -20,7 +20,9 @@
     },
     "service": {
       "required": [
-        "puppeteer",
+        "puppeteer"
+      ],
+      "optional": [
         "cache"
       ]
     }
@@ -39,7 +41,8 @@
     "@hydrooj/eslint-config": "^1.0.0",
     "eslint": "^8.34.0",
     "koishi": "^4.11.7",
-    "koishi-plugin-puppeteer": "3.4.4"
+    "koishi-plugin-puppeteer": "3.4.4",
+    "yml-register": "^1.1.0"
   },
   "peerDependencies": {
     "koishi": "^4.11.0",
