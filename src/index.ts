@@ -2,7 +2,8 @@ import { Argv, Context, Schema, h } from 'koishi';
 import { } from 'koishi-plugin-puppeteer';
 import { } from '@koishijs/cache';
 import type { HTTPResponse, Page } from 'puppeteer-core';
-import map from './map.json'
+import map from './map.json';
+import localeMap from './locales/localeMap.json';
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -25,24 +26,16 @@ declare module '@koishijs/cache' {
 
 export const name = 'enka'
 
-export const using = ['puppeteer', 'cache']
-
-export const usage = `
-## 插件说明
-
-推荐（默认）设置缓存时间为角色展柜的刷新时间： 5 分钟。
-
-> \`最大缓存时间\` 最小值为 6000(1m): enka.network 限制了查询时间为 1 分钟。
-`
+export const using = ['puppeteer']
 
 export interface Config {
     maxAge: number
-    reverseProxy: string
+    // reverseProxy: string
 }
 
 export const Config: Schema<Config> = Schema.object({
-    maxAge: Schema.number().min(60000).max(9000000).default(300000).step(1).description('图片缓存最大时间（毫秒）'),
-    reverseProxy: Schema.string().role('link').description('加速代理地址（不是梯子）')
+    maxAge: Schema.number().min(0).max(9000000).default(0).step(1).description('cache 最大时间（毫秒，低于 30000 时为不缓存）'),
+    // reverseProxy: Schema.string().role('link').description('加速代理地址（不是梯子）')
 })
 
 Argv.createDomain('UID', source => {
@@ -53,21 +46,23 @@ Argv.createDomain('UID', source => {
 })
 
 export function apply(ctx: Context, config: Config) {
+    ctx.i18n.define('zh', require('./locales/zh.yml'))
+    ctx.model.extend('user', { genshin_uid: 'string(20)' })
+    const logger = ctx.logger('enka')
+
     let page: Page;
     let lock: Promise<void>;
     let mapIndex: Record<string, string> = {};
+    let cache;
 
-    ctx.model.extend('user', {
-        genshin_uid: 'string(20)'
-    })
+    ctx.using(['cache'], () => { cache = ctx.cache('enka') })
 
-    const cache = ctx.cache('enka');
-
-    ctx.command('enka <search:string>')
+    ctx.command('enka [search:string]')
         .alias('原')
-        .userFields(['genshin_uid'])
+        .userFields(['genshin_uid', 'locale'])
         .action(async ({ session }, search) => {
-            //indexing
+            const userLang: string[] = localeMap[session.user.locale] || ["简体中文", "自定义文本"]
+            //characeter map indexing
             if (Object.keys(mapIndex).length <= 0) {
                 for (let key in map) {
                     const character = map[key];
@@ -76,59 +71,81 @@ export function apply(ctx: Context, config: Config) {
                     });
                 }
             }
-            if (!session.user.genshin_uid) return '请先使用 enka.uid [uid] 绑定账号。';
-            if (!mapIndex[search]) return '不存在该角色！';
-            search = mapIndex[search]
-            await session.send('别急，准备开查了！');
+            if (!session.user.genshin_uid) return session.text('.bind');
+            if (search && !mapIndex[search]) return session.text('.non-existent');
+            else search = mapIndex[search];
+
+            await session.send(session.text('.relax'));
             const cacheKey = `enka_u${session.user.genshin_uid}_${search}`;
-            const cacheValue = await cache.get(cacheKey);
-            //cache
-            if (cacheValue) return h.image(Buffer.from(cacheValue, 'base64').buffer, 'image/png');
-            //
+            //擦车
+            if (cache && config.maxAge >= 30000) {
+                const cacheValue = await cache.get(cacheKey);
+                if (cacheValue) return h.image(Buffer.from(cacheValue, 'base64').buffer, 'image/png');
+            }
             if (!page) page = await ctx.puppeteer.page();
             if (lock) await lock;
             let resolve: () => void;
             lock = new Promise((r) => { resolve = r; });
             try {
-                await page.goto(`${config.reverseProxy || 'https://enka.network'}/u/${session.user.genshin_uid}/`, {
+                await page.goto(`https://enka.network/u/${session.user.genshin_uid}/`, {
                     waitUntil: 'networkidle0',
                     timeout: 60000,
                 });
-                const { left, top } = await page.evaluate(async (search) => {
-                    Array.from((document.querySelectorAll('.UI.SelectorElement')) as NodeListOf<HTMLElement>).find(i => i.innerHTML.trim() === '简体中文').click();
-                    Array.from((document.querySelectorAll('.Dropdown-list')) as NodeListOf<HTMLElement>).map(i => i.style.display = 'none');
-                    const tabs = Array.from(document.getElementsByTagName('figure'));
-                    const select = tabs.find(i => i.style.backgroundImage?.toLowerCase().includes(search));
-                    if (!select) return { left: 0, top: 0 };
-                    const rect = select.parentElement.getBoundingClientRect();
-                    Array.from((document.querySelectorAll('.Checkbox.Control.sm:not(.checked)')) as NodeListOf<HTMLElement>).map(i => i.click());
-                    return { left: rect.left, top: rect.top };
-                }, search.toLowerCase());
-                if (!left) return '没有在玩家的角色展柜中找到该角色。';
-                await page.mouse.click(left + 1, top + 1);
-                await Promise.all([
-                    page.waitForNetworkIdle({ idleTime: 100 }),
-                    page.evaluate(() => {
-                        const input = document.querySelector('[placeholder="自定义文本"]') as HTMLInputElement
-                            || document.querySelector('[placeholder="Custom text"]') as HTMLInputElement;
-                        input.value = 'Koishi & Enka Network';
-                        input.dispatchEvent(new Event('input'));
-                    }),
-                ]);
-                await page.click('button[data-icon="image"]');
-                const buf = await new Promise<Buffer>((resolve) => {
-                    const cb = async (ev: HTTPResponse) => {
-                        if (!UUID.test(ev.request().url().trim())) return;
-                        page.off('response', cb);
-                        resolve(await ev.buffer());
-                    };
-                    page.on('response', cb);
-                });
-                await cache.set(cacheKey, buf.toString('base64'), config.maxAge)
-                return h.image(buf, 'image/png')
+                const { tabs, list } = await page.evaluate(async () => {
+                    const tabs = Array.from<HTMLElement>(document.getElementsByTagName('figure'));
+                    let _characters: string[] = []
+                    tabs.forEach(ele => {
+                        if (ele.style.backgroundImage?.includes('AvatarIcon')) {
+                            _characters.push(ele.style.backgroundImage?.replace('url("/ui/UI_AvatarIcon_Side_', '').replace('.png")', ''))
+                        }
+                    })
+                    return { tabs, list: _characters }
+                })
+                if (search) {
+                    const { left, top } = await page.evaluate(async (tabs, search, userLang) => {
+                        Array.from<HTMLElement>((document.querySelectorAll('.UI.SelectorElement'))).find(i => i.innerHTML.trim() === userLang).click();
+                        Array.from<HTMLElement>((document.querySelectorAll('.Dropdown-list'))).map(i => i.style.display = 'none');
+                        const select = tabs.find(i => i.style.backgroundImage?.toLowerCase().includes(search));
+                        if (!select) return { left: 0, top: 0 };
+                        const rect = select.parentElement.getBoundingClientRect();
+                        Array.from<HTMLElement>((document.querySelectorAll('.Checkbox.Control.sm:not(.checked)'))).map(i => i.click());
+                        return { left: rect.left, top: rect.top };
+                    }, tabs, search.toLowerCase(), userLang[0]);
+                    if (!left) return session.text('.not-found');
+                    await page.mouse.click(left + 1, top + 1);
+                    await Promise.all([
+                        page.waitForNetworkIdle({ idleTime: 100 }),
+                        page.evaluate((inText) => {
+                            const input = document.querySelector(`[placeholder="${inText || 'Custom text'}"]`) as HTMLInputElement;
+                            input.value = 'Koishi & Enka Network';
+                            input.dispatchEvent(new Event('input'));
+                        }, userLang[1]),
+                    ]);
+                    await page.click('button[data-icon="image"]');
+                    const buf = await new Promise<Buffer>((resolve) => {
+                        const cb = async (ev: HTTPResponse) => {
+                            if (!UUID.test(ev.request().url().trim())) return;
+                            page.off('response', cb);
+                            resolve(await ev.buffer());
+                        };
+                        page.on('response', cb);
+                    });
+                    if (cache && config.maxAge >= 30000) await cache.set(cacheKey, buf.toString('base64'), config.maxAge);
+                    return h.image(buf, 'image/png');
+                } else {
+                    let msg = `<p>${session.text('.list')}</p>`
+                    if (list.length > 0) {
+                        list.forEach(character => {
+                            msg += `<p>${character}</p>`
+                        })
+                    } else {
+                        msg = session.text('.non-list')
+                    }
+                    return msg
+                }
             } catch (error) {
-                console.error(error);
-                return '无法查看。'
+                logger.error(error);
+                return session.text('.error')
             } finally {
                 resolve();
             }
@@ -137,6 +154,6 @@ export function apply(ctx: Context, config: Config) {
         .userFields(['genshin_uid'])
         .action(async ({ session }, uid) => {
             session.user.genshin_uid = uid
-            session.send(`已保存你的 uid(${uid})`)
+            session.send(session.text('.saved', [uid]))
         })
 }
