@@ -46,7 +46,7 @@ Argv.createDomain('UID', source => {
 })
 
 export function apply(ctx: Context, config: Config) {
-    ctx.i18n.define('zh', require('./locales/zh.yml'))
+    ctx.i18n.define('zh', require('./locales/zh'))
     ctx.model.extend('user', { genshin_uid: 'string(20)' })
     const logger = ctx.logger('enka')
 
