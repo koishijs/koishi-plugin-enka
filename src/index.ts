@@ -91,7 +91,9 @@ export function apply(ctx: Context, config: Config) {
                     waitUntil: 'networkidle0',
                     timeout: 60000,
                 });
-                const { tabs, list } = await page.evaluate(async () => {
+                const { left, top, list } = await page.evaluate(async (search, userLang) => {
+                    Array.from<HTMLElement>((document.querySelectorAll('.UI.SelectorElement'))).find(i => i.innerHTML.trim() === userLang).click();
+                    Array.from<HTMLElement>((document.querySelectorAll('.Dropdown-list'))).map(i => i.style.display = 'none');
                     const tabs = Array.from<HTMLElement>(document.getElementsByTagName('figure'));
                     let _characters: string[] = []
                     tabs.forEach(ele => {
@@ -99,18 +101,17 @@ export function apply(ctx: Context, config: Config) {
                             _characters.push(ele.style.backgroundImage?.replace('url("/ui/UI_AvatarIcon_Side_', '').replace('.png")', ''))
                         }
                     })
-                    return { tabs, list: _characters }
-                })
-                if (search) {
-                    const { left, top } = await page.evaluate(async (tabs, search, userLang) => {
-                        Array.from<HTMLElement>((document.querySelectorAll('.UI.SelectorElement'))).find(i => i.innerHTML.trim() === userLang).click();
-                        Array.from<HTMLElement>((document.querySelectorAll('.Dropdown-list'))).map(i => i.style.display = 'none');
-                        const select = tabs.find(i => i.style.backgroundImage?.toLowerCase().includes(search));
-                        if (!select) return { left: 0, top: 0 };
+                    if (search) {
+                        const select = tabs.find(i => i.style.backgroundImage?.toLowerCase().includes(search.toLowerCase()));
                         const rect = select.parentElement.getBoundingClientRect();
                         Array.from<HTMLElement>((document.querySelectorAll('.Checkbox.Control.sm:not(.checked)'))).map(i => i.click());
-                        return { left: rect.left, top: rect.top };
-                    }, tabs, search.toLowerCase(), userLang[0]);
+                        if (!select) return { left: 0, top: 0, list: [] };
+                        return { left: rect.left, top: rect.top, list: [] };
+                    } else {
+                        return { left: 0, top: 0, list: _characters }
+                    }
+                }, search, userLang[0])
+                if (search) {
                     if (!left) return session.text('.not-found');
                     await page.mouse.click(left + 1, top + 1);
                     await Promise.all([
@@ -136,7 +137,7 @@ export function apply(ctx: Context, config: Config) {
                     let msg = `<p>${session.text('.list')}</p>`
                     if (list.length > 0) {
                         list.forEach(character => {
-                            if(character.includes('Costume'))
+                            if (character.includes('Costume'))
                                 character = character.split('Costume')[0]
                             msg += `<p>${character}</p>`
                         })
