@@ -16,7 +16,8 @@
     },
     "include": [
       "src",
-      "src/map.json"
+      "src/map.json",
+      "src/locales/localeMap.json"
     ],
   }
   
