@@ -136,6 +136,8 @@ export function apply(ctx: Context, config: Config) {
                     let msg = `<p>${session.text('.list')}</p>`
                     if (list.length > 0) {
                         list.forEach(character => {
+                            if(character.includes('Costume'))
+                                character = character.split('Costume')[0]
                             msg += `<p>${character}</p>`
                         })
                     } else {
