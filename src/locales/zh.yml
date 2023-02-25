@@ -3,6 +3,8 @@ commands:
     description: 查查你的原神练度
     uid:
       description: 绑定原神 uid
+      messages:
+        saved: 已保存你的 uid({0})
     messages:
       list: 你当前角色展柜中有以下角色：
       non-list: 你的角色展柜空空如也，请检查一下是否开放
@@ -11,4 +13,3 @@ commands:
       relax: 坐和放宽，在查了！
       not-found: 没有在玩家的角色展柜中找到该角色
       error: 无法查看
-      saved: 已保存你的 uid({0})
