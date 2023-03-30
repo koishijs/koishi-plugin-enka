@@ -53,7 +53,7 @@ export const Config: Schema<Config> = Schema.object({
         Schema.const(false).description('Disable'),
         Schema.const(true).description('Root'),
         Schema.string().role('link').description('Self'),
-    ]).description('代理设置')
+    ]).description('代理设置（⚠实验性）')
 })
 
 Argv.createDomain('UID', source => {
@@ -91,12 +91,11 @@ export function apply(ctx: Context, config: Config) {
             else search = mapIndex[search];
             await session.send(session.text('.relax'));
             if (!page) page = await ctx.puppeteer.page();
-            //proxy setting
-            if (config.proxy) await useProxy(page, config.proxy === true ? ctx.root.config.request.proxyAgent : config.proxy)
             if (lock) await lock;
             let resolve: () => void;
             lock = new Promise((r) => { resolve = r; });
             try {
+                if (config.proxy) await useProxy(page, config.proxy === true ? ctx.root.config.request.proxyAgent : config.proxy)
                 await page.goto(`${config.agent}/u/${session.user.genshin_uid}/`, {
                     waitUntil: 'networkidle0',
                     timeout: 60000,
@@ -141,7 +140,6 @@ export function apply(ctx: Context, config: Config) {
                         };
                         page.on('response', cb);
                     });
-                    console.log(buf)
                     return h.image(buf, 'image/png');
                 } else {
                     let msg = `<p>${session.text('.list')}</p>`
