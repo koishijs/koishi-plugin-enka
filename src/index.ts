@@ -1,6 +1,5 @@
 import { Argv, Context, Schema, h } from 'koishi';
 import { } from 'koishi-plugin-puppeteer';
-import { } from '@koishijs/cache';
 import type { HTTPResponse, Page } from 'puppeteer-core';
 import useProxy from 'puppeteer-page-proxy';
 import map from './map.json';
@@ -16,12 +15,6 @@ declare module 'koishi' {
         interface Domain {
             UID: string
         }
-    }
-}
-
-declare module '@koishijs/cache' {
-    interface Tables {
-        enka: string
     }
 }
 
@@ -74,9 +67,10 @@ export function apply(ctx: Context, config: Config) {
 
     ctx.command('enka [search:string]')
         .alias('原')
-        .userFields(['genshin_uid', 'locale'])
+        .userFields(['genshin_uid', 'locales'])
         .action(async ({ session }, search) => {
-            const userLang: string[] = localeMap[session.user.locale] || ["简体中文", "自定义文本"]
+            const locale = ((session.user as any).locale || session.user.locales[0]) ?? 'zh'
+            const userLang: string[] = localeMap[locale] || ["简体中文", "自定义文本"]
             //characeter map indexing
             if (Object.keys(mapIndex).length <= 0) {
                 for (let key in map) {
@@ -147,7 +141,7 @@ export function apply(ctx: Context, config: Config) {
                         list.forEach(character => {
                             if (character.includes('Costume'))
                                 character = character.split('Costume')[0]
-                            if ((session.user.locale === 'zh' || !session.user.locale) && map[character.toLowerCase()]) character = map[character.toLowerCase()].cnName
+                            if ((locale === 'zh' || !locale) && map[character.toLowerCase()]) character = map[character.toLowerCase()].cnName
                             msg += `<p>${character}</p>`
                         })
                     } else {
@@ -165,6 +159,9 @@ export function apply(ctx: Context, config: Config) {
         .subcommand('.uid <uid:UID>')
         .userFields(['genshin_uid'])
         .action(async ({ session }, uid) => {
+            if (!uid && !session.user.genshin_uid) return session.text('.bind')
+            if (!uid) return session.text('.uid', [session.user.genshin_uid])
+            if (uid === session.user.genshin_uid) return session.text('.same')
             session.user.genshin_uid = uid
             session.send(session.text('.saved', [uid]))
         })

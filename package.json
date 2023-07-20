@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-enka",
   "description": "Enka.Network for koishi",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "homepage": "https://github.com/koishijs/koishi-plugin-enka",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
@@ -35,9 +35,8 @@
     "练度"
   ],
   "devDependencies": {
-    "@hydrooj/eslint-config": "^1.0.0",
-    "eslint": "^8.37.0",
-    "koishi": "^4.12.2",
+    "@hydrooj/eslint-config": "^1.0.4",
+    "eslint": "^8.45.0",
     "koishi-plugin-puppeteer": "3.4.4",
     "yml-register": "^1.1.0"
   },

@@ -4,7 +4,10 @@ commands:
     uid:
       description: 绑定原神 uid
       messages:
+        uid: 你的 uid 是 {0}
         saved: 已保存你的 uid({0})
+        same: 你已经绑定了该 uid
+        bind: 请先使用 'enka.uid 114514' 绑定账号
     messages:
       list: 你当前角色展柜中有以下角色：
       non-list: 你的角色展柜空空如也，请检查一下是否开放
