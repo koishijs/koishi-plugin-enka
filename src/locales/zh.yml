@@ -6,13 +6,18 @@ commands:
       messages:
         uid: 你的 uid 是 {0}
         saved: 已保存你的 uid({0})
-        same: 你已经绑定了该 uid
-        bind: 请先使用 'enka.uid 114514' 绑定账号
+        same: 你已经绑定该 uid 了。
+        bind: 请先使用 'enka.uid 114514' 绑定账号。
+    upgrade:
+      description: 更新角色数据库
+      messages:
+        upgrading: 正在更新角色数据库...
+        upgraded: 角色数据库更新完成。
     messages:
       list: 你当前角色展柜中有以下角色：
-      non-list: 你的角色展柜空空如也，请检查一下是否开放
-      bind: 请先使用 'enka.uid 114514' 绑定账号
+      non-list: 你的角色展柜空空如也，请检查一下是否开放。
+      bind: 请先使用 'enka.uid 114514' 绑定账号。
       non-existent: 不存在该角色，请尝试通过更新本插件获取最新角色！
       relax: 坐和放宽，在查了！
-      not-found: 没有在玩家的角色展柜中找到该角色
-      error: 无法查看
+      not-found: 没有在玩家的角色展柜中找到该角色。
+      error: 无法查看。
