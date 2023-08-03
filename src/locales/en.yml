@@ -1,0 +1,23 @@
+commands:
+  enka:
+    description: Genshin Impact player cards.
+    uid:
+      description: binding genshin uid
+      messages:
+        uid: Your uid is {0}
+        saved: Saved ({0})
+        same: You have already bound this uid.
+        bind: Please use 'enka.uid [uid]' to bind your account first.
+    upgrade:
+      description: Update character database
+      messages:
+        upgrading: updating...
+        upgraded: done.
+    messages:
+      list: 'Your current character list:'
+      non-list: Your character list is empty, please check if it is open.
+      bind: Please use 'enka.uid [uid]' to bind your account first.
+      non-existent: The character does not exist, please try to use 'enka.upgrade' to update the database.
+      relax: Relax, Looking for it!
+      not-found: The character was not found in the player's character list.
+      error: Unable to view.
