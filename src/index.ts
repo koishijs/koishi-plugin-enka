@@ -3,7 +3,7 @@ import type { HTTPResponse, Page } from 'puppeteer-core';
 import { } from 'koishi-plugin-puppeteer';
 import useProxy from 'puppeteer-page-proxy';
 import fs from 'fs/promises';
-import { EnkaApiData, EnkaCharacterData, ShowAvatarInfoList } from './types';
+import { EnkaAgent, EnkaApiData, EnkaCharacterData, EnkaDataAgent, ShowAvatarInfoList } from './types';
 import localeMap from './locales/localeMap.json';
 import path from 'path';
 
@@ -22,11 +22,13 @@ declare module 'koishi' {
     }
 }
 
+export const usage = `
+此代理设置仅用于 Puppeteer，不会影响其他请求。
+`
+
 export const name = 'enka'
 
 export const using = ['puppeteer']
-
-type AgentConfig = 'value' | 'miaoToken' | 'token'
 
 interface EnkaData {
     nickname: string
@@ -38,24 +40,25 @@ interface EnkaData {
 }
 
 export interface Config {
-    agent: string | Record<AgentConfig, any>
-    data: string
+    agent: EnkaAgent
+    data: EnkaDataAgent
     proxy: boolean | string
 }
 
 export const Config: Schema<Config> = Schema.object({
     agent: Schema.union([
-        Schema.const('https://enka.network').description('Default(Enka)'),
-    ]).default('https://enka.network').description('请求地址') as Schema<string | Record<AgentConfig, any>>,
+        Schema.const(EnkaAgent.ENKA).description('默认(Enka)'),
+        Schema.const(EnkaAgent.ENKA).description('默认(Enka)'),
+    ]).default(EnkaAgent.ENKA).description('请求地址'),
     data: Schema.union([
-        Schema.const('https://koi.nyan.zone/enka').description('Default'),
-        Schema.const('https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store').description('GitHub')
-    ]).default('https://koi.nyan.zone/enka').description('数据地址') as Schema<string>,
+        Schema.const(EnkaDataAgent.NYAN).description('NyanZone'),
+        Schema.const(EnkaDataAgent.GITHUB).description('GitHub')
+    ]).default(EnkaDataAgent.NYAN).description('数据地址'),
     proxy: Schema.union([
         Schema.const(false).description('禁止'),
         Schema.const(true).description('全局设置'),
         Schema.string().role('link').description('自定义'),
-    ]).description('代理设置（⚠实验性）')
+    ]).description('Puppetter 代理设置（⚠实验性）')
 })
 
 Argv.createDomain('UID', source => {
@@ -157,7 +160,7 @@ export function apply(ctx: Context, config: Config) {
             logger.debug('search to id:', search || 'null')
             logger.debug('userLang:', userLang)
 
-            if ((!session.user.enka_data) || options.update) {
+            if (Object.keys(session.user.enka_data).length === 0 || options.update) {
                 const info = (await ctx.http.get<EnkaApiData>(`${config.agent}/api/uid/${session.user.genshin_uid}`)).playerInfo;
                 logger.debug('getting info:', info)
                 if (info)
@@ -236,6 +239,7 @@ export function apply(ctx: Context, config: Config) {
                 let title = `<p>${session.text('.list', [nickname, level, signature, worldLevel])}</p>`
                 const content: { namer: string, level: number }[] = []
                 let tLength = 1
+                logger.debug('characterLevels:', characterLevels)
                 if (characterLevels.length > 0) {
                     characterLevels.forEach(character => {
                         const namer = map[character.avatarId]
