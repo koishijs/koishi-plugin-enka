@@ -22,3 +22,27 @@ export interface ShowAvatarInfoList {
   level: number
   costumeId?: number
 }
+
+export interface EnkaCharacterData {
+  [key: `${string}`]: CharacterData
+}
+
+export interface CharacterData {
+  Element: string
+  Consts: string[]
+  SkillOrder: number[]
+  Skills: Record<`${number}`, string>
+  ProudMap: Record<`${number}`, number>
+  NameTextMapHash: number
+  SideIconName: string
+  QualityType: string
+  WeaponType: string
+  Costumes: Record<`${number}`, Costumes>
+}
+
+export interface Costumes {
+  sideIconName: string
+  icon: string
+  art: string
+  avatarId: number
+}

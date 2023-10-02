@@ -14,7 +14,7 @@ commands:
         upgrading: 正在更新角色数据库...
         upgraded: 角色数据库更新完成。
     messages:
-      list: 你当前角色展柜中有以下角色：
+      list: <p>{0}，等级：{1}，世界等级：{3}</p><p>「{2}」</p><p>▶ 当前角色展柜有：</p>
       non-list: 你的角色展柜空空如也，请检查一下是否开放。
       bind: 请先使用 'enka.uid 114514' 绑定账号。
       non-existent: 不存在该角色，请尝试通过更新本插件获取最新角色！

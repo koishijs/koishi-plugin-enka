@@ -14,7 +14,7 @@ commands:
         upgrading: updating...
         upgraded: done.
     messages:
-      list: 'Your current character list:'
+      list: '<p>{0}, Level: {1}, World Level: {3}</p><p>「{2}」</p><p>▶ Current character showcase:</p>'
       non-list: Your character list is empty, please check if it is open.
       bind: Please use 'enka.uid [uid]' to bind your account first.
       non-existent: The character does not exist, please try to use 'enka.upgrade' to update the database.
