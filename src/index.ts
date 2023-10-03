@@ -22,10 +22,6 @@ declare module 'koishi' {
     }
 }
 
-export const usage = `
-此代理设置仅用于 Puppeteer，不会影响其他请求。
-`
-
 export const name = 'enka'
 
 export const using = ['puppeteer']
@@ -58,7 +54,7 @@ export const Config: Schema<Config> = Schema.object({
         Schema.const(false).description('禁止'),
         Schema.const(true).description('全局设置'),
         Schema.string().role('link').description('自定义'),
-    ]).description('Puppetter 代理设置（⚠实验性）')
+    ]).description('Puppetter 代理设置，仅用于 Puppeteer, 不会影响其他请求（⚠实验性）')
 })
 
 Argv.createDomain('UID', source => {

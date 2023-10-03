@@ -1,13 +1,13 @@
 {
   "name": "koishi-plugin-enka",
   "description": "Enka.Network for koishi",
-  "version": "1.2.1",
-  "homepage": "https://github.com/koishijs/koishi-plugin-enka",
+  "version": "1.2.2",
+  "homepage": "https://github.com/koishijs/koishi-plugin-enka/tree/v4",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
-  "author": "undefined <i@undefined.moe>",
   "contributors": [
-    "Lonay <i@lonay.me>"
+    "Lonay <i@lonay.me>",
+    "undefined <i@undefined.moe>"
   ],
   "license": "AGPL-3.0-or-later",
   "files": [
@@ -26,7 +26,8 @@
     },
     "service": {
       "required": [
-        "puppeteer"
+        "puppeteer",
+        "database"
       ]
     }
   },
@@ -47,7 +48,7 @@
     "yml-register": "^1.1.0"
   },
   "peerDependencies": {
-    "koishi": "^4.14.6",
+    "koishi": "^4.15.0",
     "koishi-plugin-puppeteer": "^3.5.0"
   },
   "dependencies": {
