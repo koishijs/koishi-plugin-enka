@@ -48,7 +48,8 @@ export const Config: Schema<Config> = Schema.object({
     ]).default(EnkaAgent.ENKA).description('请求地址'),
     data: Schema.union([
         Schema.const(EnkaDataAgent.NYAN).description('NyanZone'),
-        Schema.const(EnkaDataAgent.GITHUB).description('GitHub')
+        Schema.const(EnkaDataAgent.GITHUB).description('GitHub'),
+        Schema.const(EnkaDataAgent.GHPROXY).description('Proxy(GH)')
     ]).default(EnkaDataAgent.NYAN).description('数据地址'),
     proxy: Schema.union([
         Schema.const(false).description('禁止'),

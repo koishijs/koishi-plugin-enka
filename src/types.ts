@@ -4,7 +4,8 @@ export enum EnkaAgent {
 
 export enum EnkaDataAgent {
   NYAN = 'https://koi.nyan.zone/enka',
-  GITHUB = 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store'
+  GITHUB = 'https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store',
+  GHPROXY = 'https://ghproxy.com/https://raw.githubusercontent.com/EnkaNetwork/API-docs/master/store'
 }
 
 export interface EnkaApiData {
