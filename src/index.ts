@@ -15,6 +15,9 @@ declare module 'koishi' {
         genshin_uid: string
         enka_data: EnkaData
     }
+    interface Tables {
+        enka_alias: EnkaAlias
+    }
     namespace Argv {
         interface Domain {
             UID: string
@@ -33,6 +36,11 @@ interface EnkaData {
     worldLevel: number
     characterList: number[]
     characterLevels: ShowAvatarInfoList[]
+}
+
+interface EnkaAlias {
+    cid: string
+    alias: string[]
 }
 
 export interface Config {
@@ -78,6 +86,13 @@ export function apply(ctx: Context, config: Config) {
         genshin_uid: 'string(20)',
         enka_data: 'json'
     })
+    ctx.model.extend('enka_alias', {
+        cid: 'string(20)',
+        alias: 'list'
+    }, {
+        primary: ['cid'],
+        unique: ['cid']
+    })
     const logger = ctx.logger('enka')
 
     let page: Page;
@@ -90,6 +105,7 @@ export function apply(ctx: Context, config: Config) {
         logger.debug('checking characters data...');
         const dataPath = path.join(ctx.root.baseDir, 'data/enka/idMap.json');
         const characterPath = path.join(ctx.root.baseDir, 'data/enka/characters.json');
+        const aliasData = await ctx.database.get('enka_alias', {})
         const update = async () => {
             if (forcibly) logger.debug('forcibly update characters data...');
             // download UIGF characters data
@@ -131,7 +147,8 @@ export function apply(ctx: Context, config: Config) {
             }
         }
         for (let id in map) {
-            mapIndex[Object.values(map[id].names).join(',')] = id; // '凯特,凱特,Kate,...': 10000001
+            const alias = aliasData.find(i => i.cid === id)?.alias || []
+            mapIndex[[Object.values(map[id].names), ...alias].join(',')] = id; // '凯特,凱特,Kate,...': 10000001
         }
         logger.info('characters data loaded.')
     }
@@ -272,5 +289,21 @@ export function apply(ctx: Context, config: Config) {
             session.send(session.text('.upgrading'))
             await initlization(true);
             return session.text('.upgraded')
+        })
+
+    ctx.command('enka.alias <name:string> <alias:string>')
+        .action(async ({ session }, name, alias) => {
+            const cid = mapIndexSearch(mapIndex, name)
+            if (!cid) return session.text('.non-existent')
+            const aliasTable = await ctx.database.get('enka_alias', { cid: cid })
+            if (aliasTable.length === 0)
+                aliasTable.push({ cid: cid, alias: [alias] })
+            else {
+                if (aliasTable[0].alias.includes(alias)) return session.text('.exist')
+                aliasTable[0].alias.push(alias)
+            }
+            await ctx.database.upsert('enka_alias', aliasTable)
+            initlization()
+            return session.text('.saved', [alias, name])
         })
 }

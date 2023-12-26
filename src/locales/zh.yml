@@ -13,11 +13,17 @@ commands:
       messages:
         upgrading: 正在更新角色数据库...
         upgraded: 角色数据库更新完成。
+    alias:
+      description: 添加角色别名
+      messages:
+        saved: 已保存角色别名「{0}」
+        exist: 该别名已存在。
+        non-existent: 未找到该角色，如果是别名请发送'enka.alias 角色全名 别名'来添加别名，例如：「enka.alias 雷电将军 雷神」
     messages:
       list: <p>{0}，等级：{1}，世界等级：{3}</p><p>「{2}」</p><p>▶ 当前角色展柜有：</p>
       non-list: 你的角色展柜空空如也，请检查一下是否开放。
-      bind: 请先使用 'enka.uid 114514' 绑定账号。
-      non-existent: 不存在该角色，请尝试通过更新本插件获取最新角色！
+      bind: 请先绑定 UID。
+      non-existent: 未找到该角色，如果是别名请发送'enka.alias 角色全名 别名'来添加别名，例如：「enka.alias 雷电将军 雷神」
       relax: 坐和放宽，在查了！
       not-found: 没有在玩家的角色展柜中找到该角色。
       error: 无法查看。
