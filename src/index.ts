@@ -18,16 +18,11 @@ declare module 'koishi' {
     interface Tables {
         enka_alias: EnkaAlias
     }
-    namespace Argv {
-        interface Domain {
-            UID: string
-        }
-    }
 }
 
 export const name = 'enka'
 
-export const using = ['puppeteer']
+export const inject = ['puppeteer', 'database']
 
 interface EnkaData {
     nickname: string
