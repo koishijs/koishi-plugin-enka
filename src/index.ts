@@ -66,12 +66,12 @@ export const Config: Schema<Config> = Schema.object({
     ]).description('Puppetter 代理设置，仅用于 Puppeteer, 不会影响其他请求（⚠实验性）')
 })
 
-Argv.createDomain('UID', source => {
-    if (/^[1256789][0-9]{3,9}$/gm.test(source))
-        return source
-    else
-        throw new Error(`"${source}"不是一个正确的uid`)
-})
+// Argv.createDomain('UID', source => {
+//     if (/^[1256789][0-9]{3,9}$/gm.test(source))
+//         return source
+//     else
+//         throw new Error(`"${source}"不是一个正确的uid`)
+// })
 
 function mapIndexSearch(index: Record<string, string>, search: string) {
     for (let key in index) {
