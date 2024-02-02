@@ -268,9 +268,10 @@ export function apply(ctx: Context, config: Config) {
             }
         })
 
-    ctx.command('enka.uid <uid:UID>')
+    ctx.command('enka.uid <uid:string>')
         .userFields(['genshin_uid'])
         .action(async ({ session }, uid) => {
+            if (!/^[1256789][0-9]{3,9}$/gm.test(uid)) return session.text('.fail')
             if (!uid && !session.user.genshin_uid) return session.text('.bind')
             if (!uid) return session.text('.uid', [session.user.genshin_uid])
             if (uid === session.user.genshin_uid) return session.text('.same')

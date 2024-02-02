@@ -8,6 +8,7 @@ commands:
         saved: Saved ({0})
         same: You have already bound this uid.
         bind: Please use 'enka.uid [uid]' to bind your account first.
+        fail: UID binding failed, please check if the UID is correct.
     upgrade:
       description: Update character database
       messages:

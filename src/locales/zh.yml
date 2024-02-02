@@ -7,7 +7,8 @@ commands:
         uid: 你的 uid 是 {0}
         saved: 已保存你的 uid({0})
         same: 你已经绑定该 uid 了。
-        bind: 请先使用 'enka.uid 114514' 绑定账号。
+        bind: 请先绑定账号。例如：「enka.uid 123456789」
+        fail: UID 绑定失败，请检查 UID 是否正确。
     upgrade:
       description: 更新角色数据库
       messages:
