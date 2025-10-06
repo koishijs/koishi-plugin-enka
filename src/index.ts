@@ -40,26 +40,28 @@ interface EnkaAlias {
 }
 
 export interface Config {
-    agent: EnkaAgent
+    agent: EnkaAgent | string
     data: EnkaDataAgent
+    imageQuality?: number
     proxy: boolean | string
 }
 
 export const Config: Schema<Config> = Schema.object({
     agent: Schema.union([
         Schema.const(EnkaAgent.ENKA).description('默认(Enka)'),
-        Schema.const(EnkaAgent.ENKA).description('默认(Enka)'),
+        Schema.string().role('link').description('自定义'),
     ]).default(EnkaAgent.ENKA).description('请求地址'),
     data: Schema.union([
         Schema.const(EnkaDataAgent.NYAN).description('NyanZone'),
         Schema.const(EnkaDataAgent.GITHUB).description('GitHub'),
         Schema.const(EnkaDataAgent.GHPROXY).description('Proxy(GH)')
     ]).default(EnkaDataAgent.NYAN).description('数据地址'),
+    // imageQuality: Schema.number().min(1).max(100).default(100).description('图片质量，仅在发送图片时有效'),
     proxy: Schema.union([
-        Schema.const(false).description('禁止'),
-        Schema.const(true).description('全局设置'),
+        Schema.const(false).description('忽略'),
+        Schema.const(true).description('跟随 proxy-agent 设置'),
         Schema.string().role('link').description('自定义'),
-    ]).description('Puppetter 代理设置，仅用于 Puppeteer, 不会影响其他请求（⚠实验性）')
+    ]).description('Puppetter 代理设置，仅用于 Puppeteer, 不会影响其他请求').experimental(),
 })
 
 // Argv.createDomain('UID', source => {
@@ -151,7 +153,7 @@ export function apply(ctx: Context, config: Config) {
 
     ctx.on('ready', async () => {
         if (!page) page = await ctx.puppeteer.page();
-        if (config.proxy) await useProxy(page, config.proxy === true ? ctx.root.config.request.proxyAgent : config.proxy);
+        if (config.proxy || (ctx.root.config.request.proxyAgent && config.proxy === true)) await useProxy(page, config.proxy === true ? ctx.root.config.request.proxyAgent : config.proxy);
         logger.info('initlizing puppeteer.');
         await initlization();
         logger.debug('all initlized.');
