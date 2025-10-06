@@ -6,6 +6,7 @@ import fs from 'fs/promises';
 import { EnkaAgent, EnkaApiData, EnkaCharacterData, EnkaDataAgent, ShowAvatarInfoList } from './types';
 import localeMap from './locales/localeMap.json';
 import path from 'path';
+import pkg from '../package.json';
 
 
 const UUIDRegExp = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -170,7 +171,12 @@ export function apply(ctx: Context, config: Config) {
             logger.debug('userLang:', userLang)
 
             if (Object.keys(session.user.enka_data).length === 0 || options.update) {
-                const info = (await ctx.http.get<EnkaApiData>(`${config.agent}/api/uid/${session.user.genshin_uid}`)).playerInfo;
+              console.log(session.user.genshin_uid)
+                const info = (await ctx.http.get<EnkaApiData>(`${config.agent}/api/uid/${session.user.genshin_uid}`, {
+                  headers: {
+                    'User-Agent': 'koishi-plugin-enka/' + pkg.version
+                  }
+                })).playerInfo;
                 logger.debug('getting info:', info)
                 if (info)
                     session.user.enka_data = {
