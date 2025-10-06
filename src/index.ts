@@ -79,7 +79,8 @@ function mapIndexSearch(index: Record<string, string>, search: string) {
 }
 
 export function apply(ctx: Context, config: Config) {
-    ctx.i18n.define('zh', require('./locales/zh'))
+    ctx.i18n.define('zh-CN', require('./locales/zh'));
+    ctx.i18n.define('en-US', require('./locales/en'));
     ctx.model.extend('user', {
         genshin_uid: 'string(20)',
         enka_data: 'json'

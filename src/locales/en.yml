@@ -12,13 +12,19 @@ commands:
     upgrade:
       description: Update character database
       messages:
-        upgrading: updating...
-        upgraded: done.
+        upgrading: Updating character database...
+        upgraded: Character database update completed.
+    alias:
+      description: Add character alias
+      messages:
+        saved: 'Saved character alias "{0}"'
+        exist: 'This alias already exists.'
+        non-existent: 'Character not found. To add an alias, use "enka.alias <full name> <alias>", e.g.: "enka.alias Raiden Shogun Raiden"'
     messages:
-      list: '<p>{0}, Level: {1}, World Level: {3}</p><p>「{2}」</p><p>▶ Current character showcase:</p>'
+      list: '<p>{0}, Level: {1}, World Level: {3}</p><p>"{2}"</p><p>▶ Current character showcase:</p>'
       non-list: Your character list is empty, please check if it is open.
-      bind: Please use 'enka.uid [uid]' to bind your account first.
-      non-existent: The character does not exist, please try to use 'enka.upgrade' to update the database.
+      bind: Please bind your UID first.
+      non-existent: 'Character not found. To add an alias, use "enka.alias <full name> <alias>", e.g.: "enka.alias Raiden Shogun Raiden"'
       relax: Relax, Looking for it!
       not-found: The character was not found in the player's character list.
       error: Unable to view.
