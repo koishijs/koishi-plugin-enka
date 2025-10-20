@@ -1,8 +1,5 @@
 # Koishi-plugin-enka
 
-> [!note]
-> 这是适用于 Koishi v4 的分支，关于 Koishi v3 可用版本请前往 [主分支](https://github.com/koishijs/koishi-plugin-enka)
-
 [![npm](https://img.shields.io/npm/v/koishi-plugin-enka?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-enka)
 [![npm-download](https://img.shields.io/npm/dm/koishi-plugin-enka?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-enka)
 ![npm-license](https://img.shields.io/npm/l/koishi-plugin-enka?style=flat-square)
@@ -29,6 +26,7 @@
 
 - 由于数据源网站可访问性较差，可能会出现超时无法查看的问题，可以为机器人更换更优质的网络环境来解决哦
 - 你需要在角色展柜中显示详细信息，不然无法知道角色详情
+- 如果访问情况不佳，可以选择自行搭建反向代理并更改请求地址
 
 ## License
 
