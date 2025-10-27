@@ -17,7 +17,8 @@
     "README.md"
   ],
   "scripts": {
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "build": "tsc"
   },
   "koishi": {
     "description": {
@@ -42,8 +43,12 @@
     "练度"
   ],
   "devDependencies": {
-    "@hydrooj/eslint-config": "^1.0.9",
-    "eslint": "^8.56.0",
+    "@hydrooj/eslint-config": "^3.0.2",
+    "@koishijs/plugin-http": "^0.6.3",
+    "@koishijs/plugin-proxy-agent": "^0.3.3",
+    "@types/node": "^24.9.1",
+    "eslint": "^9.38.0",
+    "koishi": "^4.16.7",
     "koishi-plugin-puppeteer": "3.4.4",
     "yml-register": "^1.1.0"
   },

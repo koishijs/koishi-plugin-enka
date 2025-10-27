@@ -1,52 +1,56 @@
-import { Argv, Context, Schema, h, pick } from 'koishi';
-import type { HTTPResponse, Page } from 'puppeteer-core';
-import { } from 'koishi-plugin-puppeteer';
-import useProxy from 'puppeteer-page-proxy';
 import fs from 'fs/promises';
-import { EnkaAgent, EnkaApiData, EnkaCharacterData, EnkaDataAgent, ShowAvatarInfoList } from './types';
-import localeMap from './locales/localeMap.json';
 import path from 'path';
+import { } from '@koishijs/plugin-http';
+import { } from '@koishijs/plugin-proxy-agent';
+import { Argv, Context, h, pick, Schema } from 'koishi';
+import { } from 'koishi-plugin-puppeteer';
+import type { HTTPResponse, Page } from 'puppeteer-core';
+import useProxy from 'puppeteer-page-proxy';
 import pkg from '../package.json';
-
+import localeMap from './locales/localeMap.json';
+import { EnkaAgent, EnkaApiData, EnkaCharacterData, EnkaDataAgent, ShowAvatarInfoList } from './types';
 
 const UUIDRegExp = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 declare module 'koishi' {
     interface User {
-        genshin_uid: string
-        enka_data: EnkaData
+        genshin_uid: string;
+        enka_data: EnkaData;
     }
     interface Tables {
-        enka_alias: EnkaAlias
+        enka_alias: EnkaAlias;
     }
 }
 
-export const name = 'enka'
+export const name = 'enka';
 
-export const inject = ['puppeteer', 'database']
+export const inject = ['puppeteer', 'database'];
 
 interface EnkaData {
-    nickname: string
-    level: number
-    signature: string
-    worldLevel: number
-    characterList: number[]
-    characterLevels: ShowAvatarInfoList[]
+    nickname: string;
+    level: number;
+    signature: string;
+    worldLevel: number;
+    characterList: number[];
+    characterLevels: ShowAvatarInfoList[];
 }
 
 interface EnkaAlias {
-    cid: string
-    alias: string[]
+    cid: string;
+    alias: string[];
 }
 
 export interface Config {
-    agent: EnkaAgent | string
-    data: EnkaDataAgent
-    imageQuality?: number
-    proxy: boolean | string
+    relax: boolean;
+    agent: EnkaAgent | string;
+    data: EnkaDataAgent;
+    imageQuality?: number;
+    proxy: boolean | string;
+    httpProxy: string;
 }
 
 export const Config: Schema<Config> = Schema.object({
+    relax: Schema.boolean().default(true).description('是否发送放松消息'),
     agent: Schema.union([
         Schema.const(EnkaAgent.ENKA).description('默认(Enka)'),
         Schema.string().role('link').description('自定义'),
@@ -54,7 +58,7 @@ export const Config: Schema<Config> = Schema.object({
     data: Schema.union([
         Schema.const(EnkaDataAgent.NYAN).description('NyanZone'),
         Schema.const(EnkaDataAgent.GITHUB).description('GitHub'),
-        Schema.const(EnkaDataAgent.GHPROXY).description('Proxy(GH)')
+        Schema.const(EnkaDataAgent.GHPROXY).description('Proxy(GH)'),
     ]).default(EnkaDataAgent.NYAN).description('数据地址'),
     // imageQuality: Schema.number().min(1).max(100).default(100).description('图片质量，仅在发送图片时有效'),
     proxy: Schema.union([
@@ -62,7 +66,8 @@ export const Config: Schema<Config> = Schema.object({
         Schema.const(true).description('跟随 proxy-agent 设置'),
         Schema.string().role('link').description('自定义'),
     ]).description('Puppetter 代理设置，仅用于 Puppeteer, 不会影响其他请求').experimental(),
-})
+    httpProxy: Schema.string().default('').description('HTTP 代理设置，仅用于 HTTP 请求'),
+});
 
 // Argv.createDomain('UID', source => {
 //     if (/^[1256789][0-9]{3,9}$/gm.test(source))
@@ -72,10 +77,10 @@ export const Config: Schema<Config> = Schema.object({
 // })
 
 function mapIndexSearch(index: Record<string, string>, search: string) {
-    for (let key in index) {
-        if (key.includes(search)) return index[key]
+    for (const key in index) {
+        if (key.includes(search)) return index[key];
     }
-    return false
+    return false;
 }
 
 export function apply(ctx: Context, config: Config) {
@@ -83,52 +88,53 @@ export function apply(ctx: Context, config: Config) {
     ctx.i18n.define('en-US', require('./locales/en'));
     ctx.model.extend('user', {
         genshin_uid: 'string(20)',
-        enka_data: 'json'
-    })
+        enka_data: 'json',
+    });
     ctx.model.extend('enka_alias', {
         cid: 'string(20)',
-        alias: 'list'
+        alias: 'list',
     }, {
         primary: ['cid'],
-        unique: ['cid']
-    })
-    const logger = ctx.logger('enka')
+        unique: ['cid'],
+    });
+    const logger = ctx.logger('enka');
 
     let page: Page;
     let lock: Promise<void>;
-    let mapIndex: Record<string, string> = {};
+    const mapIndex: Record<string, string> = {};
     let map: Record<string, any> = {};
     let characterInfo: EnkaCharacterData = {};
+    const proxyAgent = config.httpProxy ? config.httpProxy : undefined;
 
     async function initlization(forcibly: boolean = false) {
         logger.debug('checking characters data...');
         const dataPath = path.join(ctx.root.baseDir, 'data/enka/idMap.json');
         const characterPath = path.join(ctx.root.baseDir, 'data/enka/characters.json');
-        const aliasData = await ctx.database.get('enka_alias', {})
+        const aliasData = await ctx.database.get('enka_alias', {});
         const update = async () => {
             if (forcibly) logger.debug('forcibly update characters data...');
             // download UIGF characters data
             logger.debug('downloading UIGF ID map...');
-            const data = await ctx.http.get('https://api.uigf.org/dict/genshin/all.json');
+            const data = await ctx.http.get('https://api.uigf.org/dict/genshin/all.json', { proxyAgent });
             for (let locale in data) {
                 locale = locale.toLowerCase();
                 const characters = data[locale];
                 if (locale === 'chs') locale = 'zh';
                 if (locale === 'cht') locale = 'zh-tw';
-                for (let name in characters) {
-                    const id: number = characters[name];
+                for (const chName in characters) {
+                    const id: number = characters[chName];
                     if (id < 10000000) continue;
-                    if (!map[id]) map[id] = { names: { [locale]: name } }
-                    else map[id].names[locale] = name;
+                    if (!map[id]) map[id] = { names: { [locale]: chName } };
+                    else map[id].names[locale] = chName;
                 }
             }
             // download enka characters data
             logger.debug('downloading characters data...');
-            const enka = await ctx.http.get<Record<string, string>>(`${config.data}/characters.json`);
+            const enka = await ctx.http.get<Record<string, string>>(`${config.data}/characters.json`, { proxyAgent });
             await fs.mkdir('data/enka', { recursive: true });
-            await fs.writeFile(characterPath, JSON.stringify(enka));
+            await fs.writeFile(characterPath, typeof enka === 'string' ? enka : JSON.stringify(enka));
             await fs.writeFile(dataPath, JSON.stringify(map));
-        }
+        };
         if (forcibly) await update();
         else {
             try {
@@ -145,16 +151,18 @@ export function apply(ctx: Context, config: Config) {
                 await update();
             }
         }
-        for (let id in map) {
-            const alias = aliasData.find(i => i.cid === id)?.alias || []
+        for (const id in map) {
+            const alias = aliasData.find((i) => i.cid === id)?.alias || [];
             mapIndex[[Object.values(map[id].names), ...alias].join(',')] = id; // '凯特,凱特,Kate,...': 10000001
         }
-        logger.info('characters data loaded.')
+        logger.info('characters data loaded.');
     }
 
     ctx.on('ready', async () => {
-        if (!page) page = await ctx.puppeteer.page();
-        if (config.proxy || (ctx.root.config.request.proxyAgent && config.proxy === true)) await useProxy(page, config.proxy === true ? ctx.root.config.request.proxyAgent : config.proxy);
+        page ||= await ctx.puppeteer.page();
+        if (config.proxy || (ctx.root.config.request.proxyAgent && config.proxy === true)) {
+            await useProxy(page, config.proxy === true ? ctx.root.config.request.proxyAgent : config.proxy);
+        }
         logger.info('initlizing puppeteer.');
         await initlization();
         logger.debug('all initlized.');
@@ -164,38 +172,40 @@ export function apply(ctx: Context, config: Config) {
         .userFields(['genshin_uid', 'locales', 'enka_data'])
         .option('update', '-u')
         .action(async ({ session, options }, search) => {
-            const locale = ((session.user as any).locale || session.user.locales[0]) ?? 'zh'
-            const userLang: string[] = localeMap[locale] || ["简体中文", "自定义文本"]
-            logger.debug('search:', search)
+            const locale = ((session.user as any).locale || session.user.locales[0]) ?? 'zh';
+            const userLang: string[] = localeMap[locale] || ['简体中文', '自定义文本'];
+            logger.debug('search:', search);
             if (!session.user.genshin_uid) return session.text('.bind');
             if (search && !mapIndexSearch(mapIndex, search)) return session.text('.non-existent');
             else search = mapIndexSearch(mapIndex, search) as string;
-            logger.debug('search to id:', search || 'null')
-            logger.debug('userLang:', userLang)
+            logger.debug('search to id:', search || 'null');
+            logger.debug('userLang:', userLang);
 
             if (Object.keys(session.user.enka_data).length === 0 || options.update) {
-              console.log(session.user.genshin_uid)
+                console.log(session.user.genshin_uid);
                 const info = (await ctx.http.get<EnkaApiData>(`${config.agent}/api/uid/${session.user.genshin_uid}`, {
-                  headers: {
-                    'User-Agent': 'koishi-plugin-enka/' + pkg.version
-                  }
+                    headers: {
+                        'User-Agent': `koishi-plugin-enka/${pkg.version}`,
+                    },
+                    proxyAgent,
                 })).playerInfo;
-                logger.debug('getting info:', info)
-                if (info)
+                logger.debug('getting info:', info);
+                if (info) {
                     session.user.enka_data = {
-                        characterList: info.showAvatarInfoList.map(i => i.avatarId),
+                        characterList: info.showAvatarInfoList.map((i) => i.avatarId),
                         characterLevels: info.showAvatarInfoList,
-                        ...pick(info, ['nickname', 'level', 'signature', 'worldLevel'])
+                        ...pick(info, ['nickname', 'level', 'signature', 'worldLevel']),
                     };
+                }
             }
 
             // now, the 'search' is a character id
-            await session.send(session.text('.relax'));
+            if (config.relax) await session.send(session.text('.relax'));
             if (lock) await lock;
             let resolve: () => void;
             lock = new Promise((r) => { resolve = r; });
             if (search) {
-                logger.debug('character:', characterInfo[search])
+                logger.debug('character:', characterInfo[search]);
                 if (!characterInfo[search]) return session.text('.non-existent');
                 // check this search in user's character list
                 if (!session.user.enka_data.characterList.includes(Number(search))) return session.text('.non-existent');
@@ -206,25 +216,27 @@ export function apply(ctx: Context, config: Config) {
                         timeout: 60000,
                     });
                     const { left, top, list } = await page.evaluate(async (search, userLang) => {
-                        Array.from<HTMLElement>((document.querySelectorAll('.UI.SelectorElement'))).find(i => i.innerHTML.trim() === userLang).click();
-                        Array.from<HTMLElement>((document.querySelectorAll('.Dropdown-list'))).map(i => i.style.display = 'none');
+                        Array.from<HTMLElement>((document.querySelectorAll('.UI.SelectorElement')))
+                            .find((i) => i.innerHTML.trim() === userLang).click();
+                        Array.from<HTMLElement>((document.querySelectorAll('.Dropdown-list')))
+                            .map((i) => i.style.display = 'none');
                         const tabs = Array.from<HTMLElement>(document.getElementsByTagName('figure'));
-                        let _characters: string[] = []
-                        tabs.forEach(ele => {
+                        const _characters: string[] = [];
+                        for (const ele of tabs) {
                             if (ele.style.backgroundImage?.includes('AvatarIcon')) {
-                                _characters.push(ele.style.backgroundImage?.replace('url("/ui/', '').replace('.png")', ''))
+                                _characters.push(ele.style.backgroundImage?.replace('url("/ui/', '').replace('.png")', ''));
                             }
-                        })
+                        }
                         if (search) {
-                            const select = tabs.find(i => i.style.backgroundImage?.toLowerCase().includes(search.SideIconName.toLowerCase()));
+                            const select = tabs.find((i) => i.style.backgroundImage?.toLowerCase().includes(search.SideIconName.toLowerCase()));
                             const rect = select.parentElement.getBoundingClientRect();
-                            Array.from<HTMLElement>((document.querySelectorAll('.Checkbox.Control.sm:not(.checked)'))).map(i => i.click());
+                            Array.from<HTMLElement>((document.querySelectorAll('.Checkbox.Control.sm:not(.checked)'))).map((i) => i.click());
                             if (!select) return { left: 0, top: 0, list: [] };
                             return { left: rect.left, top: rect.top, list: [] };
                         } else {
-                            return { left: 0, top: 0, list: _characters }
+                            return { left: 0, top: 0, list: _characters };
                         }
-                    }, characterInfo[search], userLang[0])
+                    }, characterInfo[search], userLang[0]);
                     if (!left) return session.text('.not-found');
                     await page.mouse.click(left + 1, top + 1);
                     await Promise.all([
@@ -244,71 +256,71 @@ export function apply(ctx: Context, config: Config) {
                         };
                         page.on('response', cb);
                     });
+                    await page.waitForNetworkIdle({ idleTime: 100 }); // make sure it's not loading images
                     return h.image(buf, 'image/png');
                 } catch (error) {
                     logger.error(error);
-                    return session.text('.error')
+                    return session.text('.error');
                 } finally {
                     resolve();
                 }
             } else {
                 const { nickname, level, signature, worldLevel, characterLevels } = session.user.enka_data;
-                logger.debug('user_data:', session.user.enka_data)
-                let title = `<p>${session.text('.list', [nickname, level, signature, worldLevel])}</p>`
-                const content: { namer: string, level: number }[] = []
-                let tLength = 1
-                logger.debug('characterLevels:', characterLevels)
+                logger.debug('user_data:', session.user.enka_data);
+                let title = `<p>${session.text('.list', [nickname, level, signature, worldLevel])}</p>`;
+                const content: { namer: string, level: number }[] = [];
+                let tLength = 1;
+                logger.debug('characterLevels:', characterLevels);
                 if (characterLevels.length > 0) {
-                    characterLevels.forEach(character => {
-                        const namer = map[character.avatarId]
+                    for (const character of characterLevels) {
+                        const namer = map[character.avatarId];
                         if (character) {
-                            const n = namer.names[locale || 'zh']
-                            if (n.length > tLength) tLength = n.length
+                            const n = namer.names[locale || 'zh'];
+                            if (n.length > tLength) tLength = n.length;
                             content.push({
-                                namer: n, level: character.level
-                            })
+                                namer: n, level: character.level,
+                            });
                         }
-                    })
+                    }
                 } else {
-                    title = session.text('.non-list')
+                    title = session.text('.non-list');
                 }
                 resolve();
-                return title + content.map(i => `<p>(${i.level.toString().padStart(2, '0')}) ${i.namer}</p>`).join('')
+                return title + content.map((i) => `<p>(${i.level.toString().padStart(2, '0')}) ${i.namer}</p>`).join('');
             }
-        })
+        });
 
     ctx.command('enka.uid <uid:string>')
-        .userFields(['genshin_uid'])
+        .userFields(['genshin_uid', 'enka_data'])
         .action(async ({ session }, uid) => {
-            if (!/^[1256789][0-9]{3,9}$/gm.test(uid)) return session.text('.fail')
-            if (!uid && !session.user.genshin_uid) return session.text('.bind')
-            if (!uid) return session.text('.uid', [session.user.genshin_uid])
-            if (uid === session.user.genshin_uid) return session.text('.same')
-            session.user.genshin_uid = uid
-            session.send(session.text('.saved', [uid]))
-        })
+            if (!/^[125-9][0-9]{3,9}$/m.test(uid)) return session.text('.fail');
+            if (!uid && !session.user.genshin_uid) return session.text('.bind');
+            if (!uid) return session.text('.uid', [session.user.genshin_uid]);
+            if (uid === session.user.genshin_uid) return session.text('.same');
+            session.user.genshin_uid = uid;
+            session.user.enka_data = null;
+            session.send(session.text('.saved', [uid]));
+        });
 
     ctx.command('enka.upgrade')
         .alias('.up')
         .action(async ({ session }) => {
-            session.send(session.text('.upgrading'))
+            session.send(session.text('.upgrading'));
             await initlization(true);
-            return session.text('.upgraded')
-        })
+            return session.text('.upgraded');
+        });
 
     ctx.command('enka.alias <name:string> <alias:string>')
         .action(async ({ session }, name, alias) => {
-            const cid = mapIndexSearch(mapIndex, name)
-            if (!cid) return session.text('.non-existent')
-            const aliasTable = await ctx.database.get('enka_alias', { cid: cid })
-            if (aliasTable.length === 0)
-                aliasTable.push({ cid: cid, alias: [alias] })
-            else {
-                if (aliasTable[0].alias.includes(alias)) return session.text('.exist')
-                aliasTable[0].alias.push(alias)
+            const cid = mapIndexSearch(mapIndex, name);
+            if (!cid) return session.text('.non-existent');
+            const aliasTable = await ctx.database.get('enka_alias', { cid });
+            if (aliasTable.length === 0) { aliasTable.push({ cid, alias: [alias] }); } else {
+                if (aliasTable[0].alias.includes(alias)) return session.text('.exist');
+                aliasTable[0].alias.push(alias);
             }
-            await ctx.database.upsert('enka_alias', aliasTable)
-            initlization()
-            return session.text('.saved', [alias, name])
-        })
+            await ctx.database.upsert('enka_alias', aliasTable);
+            initlization();
+            return session.text('.saved', [alias, name]);
+        });
 }
